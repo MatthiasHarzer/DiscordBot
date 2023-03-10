@@ -1,6 +1,6 @@
 ﻿using Discord.WebSocket;
 
-namespace GoogleBot;
+namespace DiscordBot;
 
 /// <summary>
 ///     A place to store all global cross guild data

@@ -13,4 +13,6 @@ public static class Constants
     public static readonly string YoutubeDlpPath = Environment.GetEnvironmentVariable("YoutubeDlpPath") ?? "youtube-dlp";
     public const int MinResponseUpdateDelay = 1500; //ms
     public const int DiscordEmbedFieldLimit = 1024;
+    
+    public const int MaxCachedFiles = 500;
 }

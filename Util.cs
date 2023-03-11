@@ -176,6 +176,12 @@ public static class Util
         Color color = RandomMix(colors[0], colors[1], colors[2]);
         return new DiscordColor(color.R, color.G, color.B);
     }
+    
+    public static List<T> Shuffle<T>(this List<T> list)
+    {
+        Random rng = new Random();
+        return list.OrderBy(_ => rng.Next()).ToList();
+    }
 
 
 }

@@ -4,10 +4,16 @@ using Discord.Audio;
 using DiscordBot.Responses;
 using YoutubeDLSharp;
 using YoutubeDLSharp.Metadata;
+using YoutubeExplode;
+using YoutubeExplode.Common;
+using YoutubeExplode.Playlists;
 
 
 namespace DiscordBot.Services;
 
+/// <summary>
+/// Responsible for playing audio
+/// </summary>
 public class AudioService
 {
     private readonly GuildConfig _guildConfig;
@@ -18,14 +24,33 @@ public class AudioService
 
     private Process? _ffmpegProcess;
 
-    public Queue<VideoData> Queue { get; } = new();
+    /// <summary>
+    /// The upcoming songs
+    /// </summary>
+    public Queue<VideoData> Queue { get; private set; } = new();
 
+    /// <summary>
+    /// Whether the bot is currently playing a song
+    /// </summary>
     public bool Playing { get; private set; }
 
-    public bool Processing { get; private set; }
+    /// <summary>
+    /// Whether the bot is currently processing a song
+    /// </summary>
+    private bool Processing { get; set; }
 
-    public VideoData? CurrentVideo { get; private set; }
 
+    public bool ProcessingQueue { get; private set; }
+
+    /// <summary>
+    /// The current song
+    /// </summary>
+    public VideoData? CurrentSong { get; private set; }
+
+    /// <summary>
+    /// Creates a new instance of <see cref="AudioService"/>
+    /// </summary>
+    /// <param name="guildConfig">The guild config the audio service is for</param>
     public AudioService(GuildConfig guildConfig)
     {
         _guildConfig = guildConfig;
@@ -36,6 +61,11 @@ public class AudioService
         };
     }
 
+    /// <summary>
+    /// Creates a process that streams audio from a file
+    /// </summary>
+    /// <param name="path">The path of the audio file</param>
+    /// <returns>The process</returns>
     private Process CreateStream(string path)
     {
         return Process.Start(new ProcessStartInfo
@@ -47,19 +77,9 @@ public class AudioService
         })!;
     }
 
-    private async Task PlayFromFile(string file, IVoiceChannel voiceChannel, Action? onFail = null)
+    private async Task PlayFromFile(string file, IVoiceChannel voiceChannel)
     {
-        try
-        {
-            if (_client is null) await Connect(voiceChannel);
-        }
-        catch (Exception)
-        {
-            onFail?.Invoke();
-            return;
-        }
-
-
+        if (_client is null) await Connect(voiceChannel);
         if (_client is null) return;
 
         Playing = true;
@@ -81,8 +101,30 @@ public class AudioService
         _ = Next();
     }
 
+    private void CheckMaxCachedFiles()
+    {
+        DirectoryInfo dir = new(Constants.DownloadDir);
+        var files = dir.GetFiles("*.mp3").OrderBy(p => p.CreationTime).ToList();
+        
+        if (files.Count > Constants.MaxCachedFiles)
+        {
+            var toDelete = files.Take(files.Count - Constants.MaxCachedFiles);
+            foreach (var file in toDelete)
+            {
+                file.Delete();
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Downloads the given video to a file or gets it from the cache
+    /// </summary>
+    /// <param name="video">The video to download</param>
+    /// <returns>onUpdate: the download percentage.<br />onFinish: the file location</returns>
     private Task<PartiallyFinishedValue<int, string>> DownloadAudioOrGetCached(VideoData video)
     {
+        CheckMaxCachedFiles();
+        
         var fileName = video.ID + ".mp3";
         var outputPath = Path.Combine(Constants.DownloadDir, fileName);
         if (File.Exists(outputPath)) return Task.FromResult(new PartiallyFinishedValue<int, string>(outputPath));
@@ -112,105 +154,160 @@ public class AudioService
         return Task.FromResult(partially);
     }
 
-    private PartiallyFinishedValue<FormattedMessage, VideoData> GetVideoFromQuery(string query)
+
+    private async Task<List<string>?> GetPlayListIdsFromQuery(string query)
     {
-        var value = new PartiallyFinishedValue<FormattedMessage, VideoData>();
-
-        value.Worker = async (updateWith) =>
+        List<PlaylistVideo> videos;
+        try
         {
-            VideoData video;
+            videos = await new YoutubeClient().Playlists.GetVideosAsync(query).ToListAsync();
+        }
+        catch (ArgumentException)
+        {
+            return null; // Is not a playlist
+        }
 
-            var res = await _youtubeDlClient.RunVideoDataFetch(query);
+        return videos.Select(v => v.Id.Value).ToList();
+    }
 
-            if (res.Success)
+    private async Task<VideoData?> GetVideoFromId(string id)
+    {
+        var res = await _youtubeDlClient.RunVideoDataFetch(id);
+        if (res.Success)
+        {
+            res.Data.Url = $"https://www.youtube.com/watch?v={id}";
+            return res.Data;
+        }
+
+
+        return null;
+    }
+
+    private PartiallyFinishedValue<FormattedMessage, List<string>> GetVideoIdsFromQuery(string query)
+    {
+        var value = new PartiallyFinishedValue<FormattedMessage, List<string>>
+        {
+            Worker = async updateWith =>
             {
-                video = res.Data;
+                var videos = await GetPlayListIdsFromQuery(query);
+
+                if (videos is not null) return videos; // Return playlist
+
+                // Is not a playlist
+                VideoData video;
+                var res = await _youtubeDlClient.RunVideoDataFetch(query);
+                if (res.Success)
+                {
+                    video = res.Data;
+                }
+                else
+                {
+                    await updateWith(
+                        AudioModuleResponses.SearchingYoutube(query)
+                    );
+
+                    var apiService = YouTubeApiService.Get();
+                    var results = await apiService.Search(query);
+
+                    if (results.Count <= 0) return null;
+
+                    video = (await _youtubeDlClient.RunVideoDataFetch(results[0].Id.VideoId)).Data;
+                }
+
+                // video.Url = $"https://www.youtube.com/watch?v={video.ID}";
+                return new List<string> { video.ID };
             }
-            else
-            {
-                await updateWith(
-                    AudioModuleResponses.SearchingYoutube(query)
-                );
-
-                var apiService = YouTubeApiService.Get();
-                var results = await apiService.Search(query);
-
-                if (results.Count <= 0) return null;
-
-                video = (await _youtubeDlClient.RunVideoDataFetch(results[0].Id.VideoId)).Data;
-            }
-
-            video.Url = $"https://www.youtube.com/watch?v={video.ID}";
-            return video;
         };
 
         return value;
     }
 
+    private async Task Enqueue(List<string> videoIds, bool shuffle = false)
+    {
+        List<string> ids = new(videoIds);
+        if(shuffle)
+            ids = ids.Shuffle();
+        ProcessingQueue = true;
+        foreach (var id in ids)
+        {
+            
+            var video = await GetVideoFromId(id);
+            if (video is null) continue;
+            Queue.Enqueue(video);
+        }
+        
+        ProcessingQueue = false;
+    }
+
     private async Task<FormattedMessage> PlayWorker(Func<FormattedMessage, Task> updateWith, string query,
         IVoiceChannel voiceChannel)
     {
-        var videoFetcher = GetVideoFromQuery(query);
+        var videoFetcher = GetVideoIdsFromQuery(query);
 
-        videoFetcher.OnUpdate += text =>
-        {
-            updateWith(text);
-            return Task.CompletedTask;
-        };
+        videoFetcher.OnUpdate += updateWith;
 
-        var video = await videoFetcher.Result();
+        var videoIds = await videoFetcher.Result();
 
-        if (video == null) return AudioModuleResponses.NoResultsFound(query);
+        if (videoIds is not { Count: > 0 }) return AudioModuleResponses.NoResultsFound(query);
 
-        for (int i = 0; i < 100; i++)
-        {
-            Queue.Enqueue(video);
-        }
+        var nextVideo = (await GetVideoFromId(videoIds[0]))!;
 
         if (Playing)
         {
-            Queue.Enqueue(video);
-            return AudioModuleResponses.AddedToQueue(video, Queue.Count);
+            _ = Enqueue(videoIds);
+            return AudioModuleResponses.AddedToQueue(nextVideo, videoIds.Count - 1, Queue.Count);
+        }
+
+        if (videoIds.Count > 1)
+        {
+            _ = Enqueue(videoIds.Skip(1).ToList());
         }
 
 
-        var downloader = await DownloadAudioOrGetCached(video);
+        var downloader = await DownloadAudioOrGetCached(nextVideo);
 
-        downloader.OnUpdate += percentage =>
-        {
-            updateWith(AudioModuleResponses.DownloadingVideo(video, percentage));
-            return Task.CompletedTask;
-        };
+        downloader.OnUpdate += async percentage =>
+            await updateWith(AudioModuleResponses.DownloadingVideo(nextVideo, percentage));
+
 
         var file = await downloader.Result();
 
-        if (file == null) return AudioModuleResponses.ErrorDownloadingVideo(video.Title);
+        if (file == null) return AudioModuleResponses.ErrorDownloadingVideo(nextVideo.Title);
 
-    
-        
-        _ = PlayFromFile(file, voiceChannel, () =>
+
+        if (_client is null)
         {
-            updateWith(AudioModuleResponses.UnableToStartPlayback());
-        });
+            try
+            {
+                await Connect(voiceChannel);
+            }
+            catch (Exception)
+            {
+                return AudioModuleResponses.UnableToStartPlayback();
+            }
+        }
 
-        CurrentVideo = video;
+        _ = PlayFromFile(file, voiceChannel);
 
-        return AudioModuleResponses.PlayingVideo(video, voiceChannel);
+        CurrentSong = nextVideo;
+
+        return AudioModuleResponses.PlayingVideo(nextVideo, videoIds.Count - 1, voiceChannel);
     }
 
-    public PartiallyFinishedValue<FormattedMessage, FormattedMessage> Play(string query, IVoiceChannel voiceChannel)
+    public PartiallyFinishedValue<FormattedMessage, FormattedMessage> Play(string query, IVoiceChannel voiceChannel, bool shuffle = false)
     {
         if (Processing)
             return new PartiallyFinishedValue<FormattedMessage, FormattedMessage>(
                 AudioModuleResponses.Processing());
 
         Processing = true;
-        var response = new PartiallyFinishedValue<FormattedMessage, FormattedMessage>();
-
-        response.Worker = async (updateWith) =>
+        var response = new PartiallyFinishedValue<FormattedMessage, FormattedMessage>
         {
-            var res = await PlayWorker(updateWith, query, voiceChannel);
-            return res;
+            Worker = async (updateWith) =>
+            {
+                var res = await PlayWorker(updateWith, query, voiceChannel);
+                return res;
+            }
         };
 
         response.Finished += (_) => Task.FromResult(Processing = false);
@@ -218,7 +315,7 @@ public class AudioService
         return response;
     }
 
-    public async Task Next()
+    private async Task Next()
     {
         if (Queue.Count <= 0)
         {
@@ -235,7 +332,7 @@ public class AudioService
         if (file == null || _guildConfig.BotsVoiceChannel == null) return;
 
         _ = PlayFromFile(file, _guildConfig.BotsVoiceChannel);
-        CurrentVideo = video;
+        CurrentSong = video;
     }
 
 
@@ -267,7 +364,7 @@ public class AudioService
     {
         Queue.Clear();
         Playing = false;
-        CurrentVideo = null;
+        CurrentSong = null;
         if (_client is null) return;
         await _client.StopAsync();
         _client = null;
@@ -278,5 +375,27 @@ public class AudioService
         VideoData? upcoming = Queue.Count > 0 ? Queue.Peek() : null;
         _ffmpegProcess?.Kill();
         return upcoming;
+    }
+
+    public async Task<VideoData?> SetNext(string query)
+    {
+        var videoFetcher = GetVideoIdsFromQuery(query);
+        var videoIds = await videoFetcher.Result();
+        
+        if(videoIds is null || videoIds.Count != 1) return null;
+        
+        var nextVideo = (await GetVideoFromId(videoIds[0]))!;
+        var list = Queue.ToList();
+        list.Insert(0, nextVideo);
+        Queue = new Queue<VideoData>(list);
+
+        return nextVideo;
+    }
+    
+    public void Shuffle()
+    {
+        var list = Queue.ToList();
+        list = list.Shuffle();
+        Queue = new Queue<VideoData>(list);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Discord;
 using Discord.Interactions;
@@ -8,6 +9,7 @@ using DiscordBot.Responses;
 
 namespace DiscordBot.Modules;
 
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 public class AudioModule : InteractionModuleBase<SocketInteractionContext>
 {
     private const string QueueButtonIntend = "previous";
@@ -107,7 +109,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
 
     [RequireSameVoiceChannel]
     [SlashCommand("play", "Plays the given song in the current voice-channel")]
-    public async Task Play(string query)
+    public async Task Play(string query, bool shuffle = false)
     {
         await DeferAsync();
         var guild = this.GetGuildConfig();
@@ -125,7 +127,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
 
         try
         {
-            var response = audioService.Play(query, channel);
+            var response = audioService.Play(query, channel, shuffle);
 
             response.OnUpdate += async res => { await EditOrFollowUpAsync(res); };
 
@@ -154,6 +156,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
             await RespondAsync("Invalid message", ephemeral: true);
             return;
         }
+
         await Play(message.Content);
     }
 
@@ -206,8 +209,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
         var pages = GetQueuePages();
         var guild = this.GetGuildConfig();
 
-        var response = AudioModuleResponses.QueuePage(page, pages, guild.AudioService.Queue.Count,
-            guild.AudioService.CurrentVideo);
+        var response = AudioModuleResponses.QueuePage(page, pages, guild.AudioService);
 
         if (pages.Count > 0)
         {
@@ -242,5 +244,49 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
         await DeferAsync();
 
         await HandleQueue(page);
+    }
+
+    [SlashCommand("next", "Shows or sets the next song")]
+    public async Task Next(string? query = null)
+    {
+        await DeferAsync();
+        var guild = this.GetGuildConfig();
+
+        var audioService = guild.AudioService;
+
+        if (query == null)
+        {
+            if (audioService.Queue.Count == 0)
+            {
+                await EditOrFollowUpAsync(AudioModuleResponses.NoNextSong());
+            }
+
+            await HandleQueue();
+            return;
+        }
+
+        var response = await audioService.SetNext(query);
+
+
+        if (response == null)
+            await EditOrFollowUpAsync(AudioModuleResponses.NoResultsFound());
+
+        var message = AudioModuleResponses.NextSongQueued(response!);
+        message.Embed?.WithFooter($"Requested by {Context.User.Username}");
+
+        await EditOrFollowUpAsync(message);
+    }
+    
+    [SlashCommand("shuffle", "Shuffles the current queue")]
+    public async Task Shuffle()
+    {
+        await DeferAsync();
+        var guild = this.GetGuildConfig();
+
+        var audioService = guild.AudioService;
+
+        audioService.Shuffle();
+
+        await EditOrFollowUpAsync(AudioModuleResponses.QueueShuffled(audioService.Queue.Count));
     }
 }

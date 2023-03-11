@@ -28,7 +28,7 @@ public class InfoModule : InteractionModuleBase<SocketInteractionContext>
 
             ulong? commandId = guildCommands
                 .FirstOrDefault(x =>
-                    x.Name == command.Name && x.ApplicationId == Context.Client.CurrentUser.Id, null)?.Id;
+                    x!.Name == command.Name && x.ApplicationId == Context.Client.CurrentUser.Id, null)?.Id;
 
             embed.AddField(Formats.GetFormattedCommand(command, commandId), description);
         }

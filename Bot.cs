@@ -70,6 +70,7 @@ internal class Bot
     private async Task ClientReady()
     {
         await RegisterCommands();
+        _interactionService.Log += Log;
         _client.InteractionCreated += HandleInteractionAsync;
         _interactionService.InteractionExecuted += async (info, context, result) =>
         {

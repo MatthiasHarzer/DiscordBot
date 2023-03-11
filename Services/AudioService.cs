@@ -240,7 +240,7 @@ public class AudioService
     }
 
     private async Task<FormattedMessage> PlayWorker(Func<FormattedMessage, Task> updateWith, string query,
-        IVoiceChannel voiceChannel)
+        IVoiceChannel voiceChannel, bool shuffle = false)
     {
         var videoFetcher = GetVideoIdsFromQuery(query);
 
@@ -254,7 +254,7 @@ public class AudioService
 
         if (Playing)
         {
-            _ = Enqueue(videoIds);
+            _ = Enqueue(videoIds, shuffle);
             return AudioModuleResponses.AddedToQueue(nextVideo, videoIds.Count - 1, Queue.Count);
         }
 
@@ -281,8 +281,10 @@ public class AudioService
             {
                 await Connect(voiceChannel);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Console.WriteLine(e.Message);
+                Console.WriteLine(e.StackTrace);
                 return AudioModuleResponses.UnableToStartPlayback();
             }
         }
@@ -305,7 +307,7 @@ public class AudioService
         {
             Worker = async (updateWith) =>
             {
-                var res = await PlayWorker(updateWith, query, voiceChannel);
+                var res = await PlayWorker(updateWith, query, voiceChannel, shuffle);
                 return res;
             }
         };

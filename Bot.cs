@@ -62,7 +62,7 @@ internal class Bot
         var devGuildId = Convert.ToUInt64(Secrets.DevGuildId);
         await _interactionService.RegisterCommandsToGuildAsync(devGuildId);
 #else
-            await _interationService.RegisterCommandsGloballyAsync();
+            await _interactionService.RegisterCommandsGloballyAsync();
 #endif
         Globals.Commands = _interactionService.SlashCommands;
     }

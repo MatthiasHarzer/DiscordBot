@@ -64,6 +64,7 @@ internal class Bot
 #else
             await _interationService.RegisterCommandsGloballyAsync();
 #endif
+        Globals.Commands = _interactionService.SlashCommands;
     }
 
     private async Task ClientReady()
@@ -75,7 +76,6 @@ internal class Bot
             if (result.IsSuccess) return;
 
             await context.Interaction.RespondAsync(result.ErrorReason, ephemeral: true);
-            
         };
     }
 

@@ -1,4 +1,6 @@
-﻿using Discord.WebSocket;
+﻿using Discord.Commands;
+using Discord.Interactions;
+using Discord.WebSocket;
 
 namespace DiscordBot;
 
@@ -8,4 +10,5 @@ namespace DiscordBot;
 public static class Globals
 {
     public static DiscordSocketClient Client { get; set; } = null!;
+    public static IReadOnlyList<SlashCommandInfo> Commands { get; set; } = null!;
 }

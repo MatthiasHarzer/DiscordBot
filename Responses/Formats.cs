@@ -1,4 +1,6 @@
-﻿using YoutubeDLSharp.Metadata;
+﻿using System.Text;
+using Discord.Interactions;
+using YoutubeDLSharp.Metadata;
 
 namespace DiscordBot.Responses;
 
@@ -15,5 +17,14 @@ public static class Formats
     {
         return
             $"[`{videoData.Title} - {videoData.Artist ?? videoData.Uploader} ({SecondsToTime((int)(videoData.Duration ?? -1))})`]({videoData.Url})";
+    }
+
+    public static string GetFormattedCommand(SlashCommandInfo commandInfo, ulong? commandId = null)
+    {
+        var keyWord = commandId == null ? $"/{commandInfo.Name}" : $"</{commandInfo.Name}:{commandId}>";
+        var parameters = commandInfo.Parameters;
+
+        var formattedParams = string.Join(" ", parameters.Select(p => p.IsRequired ? $"<{p.Name}>" : $"[<{p.Name}>]"));
+        return $"{keyWord} {formattedParams}";
     }
 }

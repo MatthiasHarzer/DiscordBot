@@ -11,7 +11,7 @@ Configure the [`Constants.cs`](./Constants.cs) file to your needs with the Disco
 ```cs
 namespace DiscordBot;
 
-public static class Secrets
+public static class Constants
 {
     public static readonly string DiscordToken = @"YOUR-DISCORD-TOKEN";
     public static readonly string GoogleApiKey = @"YOUR-GOOGLE-CLOUD-API-KEY";

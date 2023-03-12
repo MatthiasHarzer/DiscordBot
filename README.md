@@ -2,10 +2,9 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A neat little Discord Bot that plays music.
+ A neat little Discord Bot that plays music.
 
-<br>
-Built using [DiscordNET](https://discordnet.dev/)
+Built using [DiscordNet](https://discordnet.dev/)
 
 ### Todo for own use:
 Configure the [`Secrets.cs`](./Secrets.cs) file to your needs with the DiscordToken and Api keys or set the environmnet variables accordingly:

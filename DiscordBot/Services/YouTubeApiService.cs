@@ -4,17 +4,20 @@ using Google.Apis.YouTube.v3.Data;
 
 namespace DiscordBot.Services;
 
+/// <summary>
+/// A simple Youtube API service, that can be used to search for videos
+/// </summary>
 public class YouTubeApiService
 {
-    private static YouTubeApiService? yt;
-    private readonly YouTubeService service;
+    private static YouTubeApiService? _yt;
+    private readonly YouTubeService _service;
 
     private YouTubeApiService()
     {
-        yt = this;
-        service = new YouTubeService(new BaseClientService.Initializer
+        _yt = this;
+        _service = new YouTubeService(new BaseClientService.Initializer
         {
-            ApiKey = Secrets.GoogleApiKey
+            ApiKey = Constants.GoogleApiKey
         });
     }
 
@@ -24,7 +27,7 @@ public class YouTubeApiService
     /// <returns></returns>
     public static YouTubeApiService Get()
     {
-        return yt ?? new YouTubeApiService();
+        return _yt ?? new YouTubeApiService();
     }
 
     /// <summary>
@@ -34,7 +37,7 @@ public class YouTubeApiService
     /// <returns>A list of search results. Empty if none where found</returns>
     public async Task<List<SearchResult>> Search(string searchTerm)
     {
-        var searchListRequest = service.Search.List("snippet");
+        var searchListRequest = _service.Search.List("snippet");
         searchListRequest.Q = searchTerm;
         searchListRequest.Type = "video";
         searchListRequest.VideoCategoryId = "10";

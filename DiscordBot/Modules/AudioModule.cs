@@ -87,7 +87,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
 
             var line = $"\n\n{i + 1}. {Formats.GetVideoLinked(video)}";
 
-            if (characterCount + line.Length > Constants.DiscordEmbedFieldLimit)
+            if (characterCount + line.Length > Constants.DiscordEmbedFieldCharacterLimit)
             {
                 pages.Add(sb.ToString());
                 sb.Clear();
@@ -131,7 +131,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
 
             response.OnUpdate += async res => { await EditOrFollowUpAsync(res); };
 
-            var result = await response.Result();
+            var result = await response.Result;
 
             if (result == null)
                 await EditOrFollowUpAsync(

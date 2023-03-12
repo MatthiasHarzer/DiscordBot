@@ -1,4 +1,5 @@
-﻿using Timer = System.Timers.Timer;
+﻿using DiscordBot.Utility;
+using Timer = System.Timers.Timer;
 
 namespace DiscordBot.Services;
 

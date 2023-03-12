@@ -21,10 +21,15 @@ internal class Bot
 
     public static Task Main(string[] args)
     {
-        if (Secrets.DiscordToken == null)
+        if (Constants.DiscordToken == null)
         {
             Console.WriteLine("Discord Token must not be null!");
             return Task.CompletedTask;
+        }
+        
+        if(Constants.GoogleApiKey == null)
+        {
+            Console.WriteLine("Google API Key should not be null. Some commands will not work!");
         }
 
         // Check if the downloads directory exists
@@ -41,7 +46,7 @@ internal class Bot
 
     private async Task MainAsync()
     {
-        await _client.LoginAsync(TokenType.Bot, Secrets.DiscordToken);
+        await _client.LoginAsync(TokenType.Bot, Constants.DiscordToken);
         await _client.StartAsync();
 
 
@@ -58,8 +63,8 @@ internal class Bot
         await _interactionService.AddModulesAsync(Assembly.GetEntryAssembly(), null);
 
 #if DEBUG
-        if (Secrets.DevGuildId == null) return;
-        var devGuildId = Convert.ToUInt64(Secrets.DevGuildId);
+        if (Constants.DevGuildId == null) return;
+        var devGuildId = Convert.ToUInt64(Constants.DevGuildId);
         await _interactionService.RegisterCommandsToGuildAsync(devGuildId);
 #else
             await _interactionService.RegisterCommandsGloballyAsync();

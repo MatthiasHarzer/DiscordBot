@@ -4,6 +4,9 @@ using DiscordBot.Services;
 
 namespace DiscordBot.Preconditions;
 
+/// <summary>
+/// Requires the user to be in the same voice channel as the bot
+/// </summary>
 public class RequireSameVoiceChannel : PreconditionAttribute
 {
     public override Task<PreconditionResult> CheckRequirementsAsync(IInteractionContext context,

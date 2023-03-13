@@ -36,6 +36,11 @@ public static class Constants
     public static readonly string DownloadDir = Path.Combine(Environment.CurrentDirectory, "Downloads");
     
     /// <summary>
+    /// The directory to store cross session guild configs
+    /// </summary>
+    public static readonly string GuildConfigDir = Path.Combine(Environment.CurrentDirectory, "guild.configs");
+    
+    /// <summary>
     /// The binary path for youtube-dlp
     /// </summary>
     public static readonly string YoutubeDlpPath = Environment.GetEnvironmentVariable("YoutubeDlpPath") ?? "yt-dlp";

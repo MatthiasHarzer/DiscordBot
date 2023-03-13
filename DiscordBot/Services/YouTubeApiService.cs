@@ -1,4 +1,5 @@
-﻿using Google.Apis.Services;
+﻿using DiscordBot.Utility;
+using Google.Apis.Services;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 
@@ -50,5 +51,42 @@ public class YouTubeApiService
             .FindAll(item => item.Snippet.LiveBroadcastContent == "none");
 
         return results;
+    }
+
+    /// <summary>
+    /// Finds a related video given a video id
+    /// </summary>
+    /// <param name="videoId">The video to find related videos to</param>
+    /// <returns>A video id</returns>
+    public async Task<string?> FindRelatedVideo(string videoId)
+    {
+        var searchListRequest = _service.Search.List("snippet");
+        searchListRequest.RelatedToVideoId = videoId;
+        searchListRequest.Type = "video";
+        searchListRequest.VideoCategoryId = "10";
+        searchListRequest.MaxResults = 10;
+        searchListRequest.Order = SearchResource.ListRequest.OrderEnum.Relevance;
+
+        var response = (await searchListRequest.ExecuteAsync())?.Items ?? new List<SearchResult>();
+
+        List<SearchResult> results = new List<SearchResult>();
+        foreach (SearchResult searchResult in response.ToList())
+        {
+            try
+            {
+                if (searchResult.Snippet.LiveBroadcastContent == "none")
+                {
+                    results.Add(searchResult);
+                }
+            }
+            catch
+            {
+                // ignored
+            }
+            // if(results.Count >= 5) break;
+        }
+
+        var videos = results.ConvertAll(input => input.Id.VideoId).Take(5);
+        return videos.Shuffle().FirstOrDefault();
     }
 }

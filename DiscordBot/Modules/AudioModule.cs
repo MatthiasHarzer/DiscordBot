@@ -276,7 +276,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
 
         await EditOrFollowUpAsync(message);
     }
-    
+
     [SlashCommand("shuffle", "Shuffles the current queue")]
     public async Task Shuffle()
     {
@@ -288,5 +288,21 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
         audioService.Shuffle();
 
         await EditOrFollowUpAsync(AudioModuleResponses.QueueShuffled(audioService.Queue.Count));
+    }
+
+    [SlashCommand("autoplay", "If enabled, the bot will search for similar songs when reaching the end of the queue")]
+    public async Task Autoplay(bool? enabled = null)
+    {
+        await DeferAsync();
+        var guild = this.GetGuildConfig();
+        if (enabled == null)
+        {
+            await EditOrFollowUpAsync(AudioModuleResponses.AutoplayIsCurrently(guild.AutoPlay));
+            return;
+        }
+
+        guild.AutoPlay = enabled.Value;
+        
+        await EditOrFollowUpAsync(AudioModuleResponses.AutoplayToggled(enabled.Value));
     }
 }

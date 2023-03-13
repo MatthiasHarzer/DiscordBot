@@ -117,4 +117,9 @@ public class PartiallyFinishedValue<TUpdate, TResult>
 
         Resolve(result);
     }
+    
+    public void ForceFinish(TResult? result)
+    {
+        Resolve(result);
+    }
 }

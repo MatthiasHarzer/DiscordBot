@@ -18,6 +18,12 @@ internal class Bot
         Globals.Client = _client;
     }
 
+    private static readonly string[] Directories = new string[]
+    {
+        Constants.DownloadDir,
+        Constants.GuildConfigDir
+    };
+
 
     public static Task Main(string[] args)
     {
@@ -26,14 +32,19 @@ internal class Bot
             Console.WriteLine("Discord Token must not be null!");
             return Task.CompletedTask;
         }
-        
-        if(Constants.GoogleApiKey == null)
+
+        if (Constants.GoogleApiKey == null)
         {
             Console.WriteLine("Google API Key should not be null. Some commands will not work!");
         }
 
         // Check if the downloads directory exists
-        if (!Directory.Exists(Constants.DownloadDir)) Directory.CreateDirectory(Constants.DownloadDir);
+
+        foreach (var dir in Directories)
+        {
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+        }
+
 
         return new Bot().MainAsync();
     }

@@ -44,7 +44,7 @@ public static class AudioModuleResponses
     }
 
     public static FormattedMessage NoResultsFound(string? query = null) => new(Template
-        .WithDescription(query != null ?$"No results found for `{query}`" : "No results found"));
+        .WithDescription(query != null ? $"No results found for `{query}`" : "No results found"));
 
     public static FormattedMessage Processing() => new(Template
         .WithDescription("Already processing a request. Please wait..."));
@@ -88,7 +88,7 @@ public static class AudioModuleResponses
             .AddField($"Queue ({service.Queue.Count})", pages[page])
             .WithFooter(footer));
     }
-    
+
     public static FormattedMessage NoNextSong() => new(Template
         .WithDescription("There is no upcoming song"));
 
@@ -98,10 +98,19 @@ public static class AudioModuleResponses
 
     public static FormattedMessage UnableToStartPlayback() => new(Template
         .WithDescription("Unable to start playback. Please try again later"));
-    
+
     public static FormattedMessage NextSongQueued(VideoData videoData) => new(Template
         .AddField("Song will play next", Formats.GetVideoLinked(videoData)));
-    
+
     public static FormattedMessage QueueShuffled(int count) => new(Template
         .WithDescription($"Shuffled {count} songs in the queue"));
+
+    public static FormattedMessage AutoplayIsCurrently(bool enabled) => new(Template
+        .WithDescription($"Autoplay is currently `{(enabled ? "enabled" : "disabled")}`"));
+
+    public static FormattedMessage AutoplayToggled(bool enabled) => new(Template
+        .WithDescription($"Autoplay has been turned `{(enabled ? "on" : "off")}`"));
+    
+    public static FormattedMessage ProcessingTimeout() => new(Template
+        .WithDescription("Processing timed out. Please try again later"));
 }

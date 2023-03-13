@@ -262,7 +262,7 @@ public class AudioService
 
         ProcessingQueue = false;
     }
-
+    
     /// <summary>
     /// Resolves the given query and plays the first result. Enqueues the rest of the results if the query was a
     /// playlist or the bot is already playing back some audio.
@@ -275,13 +275,18 @@ public class AudioService
     private async Task<FormattedMessage> PlayWorker(Func<FormattedMessage, Task> updateWith, string query,
         IVoiceChannel voiceChannel, bool shuffle = false)
     {
+        
         var videoFetcher = GetVideoIdsFromQuery(query);
+
+        var timer = _guildConfig.Timer.Run(() => videoFetcher.ForceFinish(null)).In(seconds: 10).Start();
 
         videoFetcher.OnUpdate += updateWith;
 
         var videoIds = await videoFetcher.Result;
 
         if (videoIds is not { Count: > 0 }) return AudioModuleResponses.NoResultsFound(query);
+        
+        timer.Stop();
 
         var nextVideo = (await GetVideoFromId(videoIds[0]))!;
 
@@ -295,8 +300,7 @@ public class AudioService
         {
             _ = Enqueue(videoIds.Skip(1).ToList());
         }
-
-
+        
         var downloader = await DownloadAudioOrGetCached(nextVideo);
 
         downloader.OnUpdate += async percentage =>
@@ -347,7 +351,18 @@ public class AudioService
         var response = new PartiallyFinishedValue<FormattedMessage, FormattedMessage>(
             worker: async (updateWith) => await PlayWorker(updateWith, query, voiceChannel, shuffle));
 
-        response.OnFinished += (_) => Task.FromResult(Processing = false);
+        var timer = _guildConfig.Timer.Run(() =>
+        {
+            response.ForceFinish(AudioModuleResponses.ProcessingTimeout());
+            Processing = false;
+        }).In(minutes: 2).Start();
+
+
+        response.OnFinished += (_) =>
+        {
+            timer.Stop();
+            return Task.FromResult(Processing = false);
+        };
 
         return response;
     }
@@ -360,8 +375,16 @@ public class AudioService
     {
         if (Queue.Count <= 0)
         {
-            await Disconnect();
-            return;
+            if (!_guildConfig.AutoPlay)
+            {
+                await Disconnect();
+                return;
+            }
+            
+            var relatedVideoId = await YouTubeApiService.Get().FindRelatedVideo(CurrentSong!.ID);
+            if (relatedVideoId is null) return;
+            
+            await Enqueue(new List<string> { relatedVideoId });
         }
 
         var video = Queue.Dequeue();

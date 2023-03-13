@@ -7,14 +7,15 @@
 Built using [DiscordNet](https://discordnet.dev/)
 
 ### Todo for own use:
-Configure the [`Secrets.cs`](./Secrets.cs) file to your needs with the DiscordToken and Api keys or set the environmnet variables accordingly:
+Configure the [`Constants.cs`](./Constants.cs) file to your needs with the DiscordToken and Api keys or set the environmnet variables accordingly:
 ```cs
 namespace DiscordBot;
 
-public static class Secrets
+public static class Constants
 {
     public static readonly string DiscordToken = @"YOUR-DISCORD-TOKEN";
     public static readonly string GoogleApiKey = @"YOUR-GOOGLE-CLOUD-API-KEY";
+    public static readonly string YoutubeDlpPath = @"PATH-TO-YT-DLP-BINARY";
 }
 
 ```

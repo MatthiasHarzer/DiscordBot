@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Discord;
 using Discord.Audio;
+using DiscordBot.Extensions;
 using DiscordBot.Responses;
 using DiscordBot.Utility;
 using YoutubeDLSharp;
@@ -23,6 +24,8 @@ public class AudioService
     private IAudioClient? _client;
 
     private Process? _ffmpegProcess;
+
+    private GuildTimer.Timed? _timer;
 
     /// <summary>
     /// The upcoming songs
@@ -262,7 +265,7 @@ public class AudioService
 
         ProcessingQueue = false;
     }
-    
+
     /// <summary>
     /// Resolves the given query and plays the first result. Enqueues the rest of the results if the query was a
     /// playlist or the bot is already playing back some audio.
@@ -275,7 +278,6 @@ public class AudioService
     private async Task<FormattedMessage> PlayWorker(Func<FormattedMessage, Task> updateWith, string query,
         IVoiceChannel voiceChannel, bool shuffle = false)
     {
-        
         var videoFetcher = GetVideoIdsFromQuery(query);
 
         var timer = _guildConfig.Timer.Run(() => videoFetcher.ForceFinish(null)).In(seconds: 10).Start();
@@ -285,7 +287,7 @@ public class AudioService
         var videoIds = await videoFetcher.Result;
 
         if (videoIds is not { Count: > 0 }) return AudioModuleResponses.NoResultsFound(query);
-        
+
         timer.Stop();
 
         var nextVideo = (await GetVideoFromId(videoIds[0]))!;
@@ -300,7 +302,7 @@ public class AudioService
         {
             _ = Enqueue(videoIds.Skip(1).ToList());
         }
-        
+
         var downloader = await DownloadAudioOrGetCached(nextVideo);
 
         downloader.OnUpdate += async percentage =>
@@ -373,6 +375,10 @@ public class AudioService
     /// </summary>
     private async Task Next()
     {
+        await CheckIdleStatus();
+
+        if (_client is null) return;
+
         if (Queue.Count <= 0)
         {
             if (!_guildConfig.AutoPlay)
@@ -380,10 +386,10 @@ public class AudioService
                 await Disconnect();
                 return;
             }
-            
+
             var relatedVideoId = await YouTubeApiService.Get().FindRelatedVideo(CurrentSong!.ID);
             if (relatedVideoId is null) return;
-            
+
             await Enqueue(new List<string> { relatedVideoId });
         }
 
@@ -400,15 +406,20 @@ public class AudioService
     }
 
     /// <summary>
-    /// Checks if the bot is the only user in the given voice channel.
+    /// Checks if the bot is the only user in its current vc and disconnects if it is.
     /// </summary>
-    /// <param name="channel">The voiceChannel to check</param>
     /// <returns></returns>
-    private async Task<bool> IsAlone(IVoiceChannel channel)
+    private async Task CheckIdleStatus()
     {
-        var users = await channel.GetUsersAsync().FlattenAsync();
-        var guildUsers = users as IGuildUser[] ?? users.ToArray();
-        return guildUsers.All(user => user.IsBot);
+        var channel = _guildConfig.BotsVoiceChannel;
+
+        if (channel is not null)
+        {
+            var connectedUsers = await channel.GetConnectedUsers(excludeBots: true);
+            if (connectedUsers.Count > 0) return;
+        }
+
+        await Disconnect();
     }
 
     /// <summary>
@@ -418,11 +429,9 @@ public class AudioService
     private async Task Connect(IVoiceChannel channel)
     {
         _client = await channel.ConnectAsync();
-
-        _client.ClientDisconnected += async _ =>
-        {
-            if (await IsAlone(channel)) await Disconnect();
-        };
+        
+        _client.ClientDisconnected += _ =>
+            Task.FromResult(_guildConfig.Timer.Run(() => CheckIdleStatus()).In(minutes: 1).Start());
 
         _client.Disconnected += async _ =>
         {
@@ -430,6 +439,8 @@ public class AudioService
             await Disconnect();
             _ffmpegProcess?.Kill();
         };
+
+        _timer = _guildConfig.Timer.Run(() => _ = CheckIdleStatus()).Every(minutes: 5).Start();
     }
 
     /// <summary>
@@ -439,8 +450,10 @@ public class AudioService
     public async Task Disconnect()
     {
         Queue.Clear();
+        _timer?.Stop();
         Playing = false;
         CurrentSong = null;
+
         if (_client is null) return;
         await _client.StopAsync();
         _client = null;

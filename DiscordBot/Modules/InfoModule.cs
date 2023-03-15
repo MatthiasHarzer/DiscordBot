@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Discord;
 using Discord.Interactions;
+using DiscordBot.Extensions;
 using DiscordBot.Responses;
 using DiscordBot.Utility;
 

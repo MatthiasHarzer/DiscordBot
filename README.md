@@ -7,7 +7,7 @@
 Built using [DiscordNet](https://discordnet.dev/)
 
 ### Todo for own use:
-Configure the [`Constants.cs`](.DiscordBot//Constants.cs) file to your needs with the DiscordToken and Api keys or set the environmnet variables accordingly:
+Configure the [`Constants.cs`](./DiscordBot/Constants.cs) file to your needs with the DiscordToken and Api keys or set the environmnet variables accordingly:
 ```cs
 namespace DiscordBot;
 

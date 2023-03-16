@@ -85,8 +85,7 @@ public class YouTubeApiService
             }
             // if(results.Count >= 5) break;
         }
-
-        var videos = results.ConvertAll(input => input.Id.VideoId).Take(5);
-        return videos.Shuffle().FirstOrDefault();
+        
+        return results.ConvertAll(input => input.Id.VideoId).FirstOrDefault();
     }
 }

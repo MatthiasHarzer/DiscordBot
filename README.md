@@ -13,9 +13,11 @@ namespace DiscordBot;
 
 public static class Constants
 {
+    ...
     public static readonly string DiscordToken = @"YOUR-DISCORD-TOKEN";
     public static readonly string GoogleApiKey = @"YOUR-GOOGLE-CLOUD-API-KEY";
     public static readonly string YoutubeDlpPath = @"PATH-TO-YT-DLP-BINARY";
+    ...
 }
 
 ```

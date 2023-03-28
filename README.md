@@ -1,6 +1,7 @@
 # DiscordBot
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![.NET](https://github.com/MatthiasHarzer/DiscordBot/actions/workflows/dotnet-desktop.yml/badge.svg?branch=production)](https://github.com/MatthiasHarzer/DiscordBot/actions/workflows/dotnet-desktop.yml)
 
  A neat little Discord Bot that plays music.
 

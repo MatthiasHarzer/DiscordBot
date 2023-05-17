@@ -13,14 +13,14 @@ namespace DiscordBot.Modules;
 public class AudioModule : InteractionModuleBase<SocketInteractionContext>
 {
     private const string QueueButtonIntend = "previous";
+    private bool _isProcessing;
+
+    private bool _isUpdating;
 
     private long _lastUpdate;
 
     private FormattedMessage _newContent = null!;
     private Color? _oldColor;
-
-    private bool _isUpdating;
-    private bool _isProcessing;
 
     private async Task EditOrFollowUpAsync(FormattedMessage message)
     {
@@ -60,10 +60,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
         var now = DateTimeOffset.Now.ToUnixTimeMilliseconds();
         var diff = now - _lastUpdate;
 
-        if (diff < Constants.MinResponseUpdateDelay)
-        {
-            await Task.Delay(Constants.MinResponseUpdateDelay - (int)diff);
-        }
+        if (diff < Constants.MinResponseUpdateDelay) await Task.Delay(Constants.MinResponseUpdateDelay - (int) diff);
 
         while (_isProcessing)
             await Task.Delay(100);
@@ -77,11 +74,11 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
         List<string> pages = new();
 
         var queue = this.GetGuildConfig().AudioService.Queue;
-        int characterCount = 0;
+        var characterCount = 0;
 
         StringBuilder sb = new();
 
-        for (int i = 0; i < queue.Count; i++)
+        for (var i = 0; i < queue.Count; i++)
         {
             var video = queue.ToArray()[i];
 
@@ -98,10 +95,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
             characterCount += line.Length;
         }
 
-        if (sb.Length > 0)
-        {
-            pages.Add(sb.ToString());
-        }
+        if (sb.Length > 0) pages.Add(sb.ToString());
 
 
         return pages;
@@ -111,6 +105,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
     [SlashCommand("play", "Plays the given song in the current voice-channel")]
     public async Task Play(string query, bool shuffle = false)
     {
+        Console.WriteLine("Play");
         await DeferAsync();
         var guild = this.GetGuildConfig();
 
@@ -212,13 +207,11 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
         var response = AudioModuleResponses.QueuePage(page, pages, guild.AudioService);
 
         if (pages.Count > 0)
-        {
             response.WithComponents(new ComponentBuilder()
                 .WithButton("⬅️", QueueButtonIntend + ":" + (page - 1), ButtonStyle.Secondary, disabled: page == 0)
                 .WithButton("➡️", QueueButtonIntend + ":" + (page + 1), ButtonStyle.Secondary,
                     disabled: pages.Count == page + 1)
             );
-        }
 
 
         await EditOrFollowUpAsync(response);
@@ -256,10 +249,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
 
         if (query == null)
         {
-            if (audioService.Queue.Count == 0)
-            {
-                await EditOrFollowUpAsync(AudioModuleResponses.NoNextSong());
-            }
+            if (audioService.Queue.Count == 0) await EditOrFollowUpAsync(AudioModuleResponses.NoNextSong());
 
             await HandleQueue();
             return;
@@ -302,7 +292,7 @@ public class AudioModule : InteractionModuleBase<SocketInteractionContext>
         }
 
         guild.AutoPlay = enabled.Value;
-        
+
         await EditOrFollowUpAsync(AudioModuleResponses.AutoplayToggled(enabled.Value));
     }
 }

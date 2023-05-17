@@ -1,5 +1,4 @@
-﻿using System.Text;
-using Discord.Interactions;
+﻿using Discord.Interactions;
 using YoutubeDLSharp.Metadata;
 
 namespace DiscordBot.Responses;
@@ -16,7 +15,7 @@ public static class Formats
     public static string GetVideoLinked(VideoData videoData)
     {
         return
-            $"[`{videoData.Title} - {videoData.Artist ?? videoData.Uploader} ({SecondsToTime((int)(videoData.Duration ?? -1))})`]({videoData.Url})";
+            $"[`{videoData.Title} - {videoData.Artist ?? videoData.Uploader} ({SecondsToTime((int) (videoData.Duration ?? -1))})`]({videoData.Url})";
     }
 
     public static string GetFormattedCommand(SlashCommandInfo commandInfo, ulong? commandId = null)

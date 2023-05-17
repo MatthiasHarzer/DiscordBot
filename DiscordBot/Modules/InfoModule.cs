@@ -1,7 +1,5 @@
-﻿using System.Text;
-using Discord;
+﻿using Discord;
 using Discord.Interactions;
-using DiscordBot.Extensions;
 using DiscordBot.Responses;
 using DiscordBot.Utility;
 
@@ -17,7 +15,7 @@ public class InfoModule : InteractionModuleBase<SocketInteractionContext>
 
         var guildCommands = await Context.Guild.GetApplicationCommandsAsync();
 
-        var embed = new EmbedBuilder()
+        var embed = new EmbedBuilder
             {
                 Color = Util.RandomColor(),
                 Timestamp = DateTimeOffset.Now
@@ -28,7 +26,7 @@ public class InfoModule : InteractionModuleBase<SocketInteractionContext>
         {
             var description = command.Description ?? "No description provided";
 
-            ulong? commandId = guildCommands
+            var commandId = guildCommands
                 .FirstOrDefault(x =>
                     x!.Name == command.Name && x.ApplicationId == Context.Client.CurrentUser.Id, null)?.Id;
 

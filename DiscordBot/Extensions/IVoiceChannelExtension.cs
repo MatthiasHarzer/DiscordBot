@@ -5,7 +5,7 @@ namespace DiscordBot.Extensions;
 public static class IVoiceChannelExtension
 {
     /// <summary>
-    /// Returns all users connected to the voice channel
+    ///     Returns all users connected to the voice channel
     /// </summary>
     /// <param name="voiceChannel">The voice channel</param>
     /// <param name="excludeBots">Whether to exclude bots when fetching connected users</param>

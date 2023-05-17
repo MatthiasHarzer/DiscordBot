@@ -9,11 +9,10 @@ using YoutubeDLSharp.Metadata;
 using YoutubeExplode;
 using YoutubeExplode.Playlists;
 
-
 namespace DiscordBot.Services;
 
 /// <summary>
-/// Responsible for playing audio
+///     Responsible for playing audio
 /// </summary>
 public class AudioService
 {
@@ -28,46 +27,46 @@ public class AudioService
     private GuildTimer.Timed? _timer;
 
     /// <summary>
-    /// The upcoming songs
-    /// </summary>
-    public Queue<VideoData> Queue { get; private set; } = new();
-
-    /// <summary>
-    /// Whether the bot is currently playing a song
-    /// </summary>
-    public bool Playing { get; private set; }
-
-    /// <summary>
-    /// Whether the bot is currently processing a song
-    /// </summary>
-    private bool Processing { get; set; }
-
-    /// <summary>
-    /// Indicates whether the bot is currently processing a queue
-    /// </summary>
-    public bool ProcessingQueue { get; private set; }
-
-    /// <summary>
-    /// The current song
-    /// </summary>
-    public VideoData? CurrentSong { get; private set; }
-
-    /// <summary>
-    /// Creates a new instance of <see cref="AudioService"/>
+    ///     Creates a new instance of <see cref="AudioService" />
     /// </summary>
     /// <param name="guildConfig">The guild config the audio service is for</param>
     public AudioService(GuildConfig guildConfig)
     {
         _guildConfig = guildConfig;
-        _youtubeDlClient = new YoutubeDL()
+        _youtubeDlClient = new YoutubeDL
         {
             YoutubeDLPath = Constants.YoutubeDlpPath,
-            OutputFolder = Constants.DownloadDir,
+            OutputFolder = Constants.DownloadDir
         };
     }
 
     /// <summary>
-    /// Creates a process that streams audio from a file
+    ///     The upcoming songs
+    /// </summary>
+    public Queue<VideoData> Queue { get; private set; } = new();
+
+    /// <summary>
+    ///     Whether the bot is currently playing a song
+    /// </summary>
+    public bool Playing { get; private set; }
+
+    /// <summary>
+    ///     Whether the bot is currently processing a song
+    /// </summary>
+    private bool Processing { get; set; }
+
+    /// <summary>
+    ///     Indicates whether the bot is currently processing a queue
+    /// </summary>
+    public bool ProcessingQueue { get; private set; }
+
+    /// <summary>
+    ///     The current song
+    /// </summary>
+    public VideoData? CurrentSong { get; private set; }
+
+    /// <summary>
+    ///     Creates a process that streams audio from a file
     /// </summary>
     /// <param name="path">The path of the audio file</param>
     /// <returns>The process</returns>
@@ -75,7 +74,7 @@ public class AudioService
     {
         return Process.Start(new ProcessStartInfo
         {
-            FileName = "ffmpeg",
+            FileName = Constants.FfmpegPath,
             Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1",
             UseShellExecute = false,
             RedirectStandardOutput = true
@@ -83,7 +82,7 @@ public class AudioService
     }
 
     /// <summary>
-    /// Plays a song from a provided file path.
+    ///     Plays a song from a provided file path.
     /// </summary>
     /// <param name="file">The file to playback</param>
     /// <param name="voiceChannel">The voicechannel to play the audio in</param>
@@ -112,7 +111,7 @@ public class AudioService
     }
 
     /// <summary>
-    /// Checks if the maximum amount of cached files is reached and deletes the oldest ones if so
+    ///     Checks if the maximum amount of cached files is reached and deletes the oldest ones if so
     /// </summary>
     private void CheckMaxCachedFiles()
     {
@@ -122,15 +121,12 @@ public class AudioService
         if (files.Count > Constants.MaxCachedFiles)
         {
             var toDelete = files.Take(files.Count - Constants.MaxCachedFiles);
-            foreach (var file in toDelete)
-            {
-                file.Delete();
-            }
+            foreach (var file in toDelete) file.Delete();
         }
     }
 
     /// <summary>
-    /// Downloads the given video to a file or gets it from the cache
+    ///     Downloads the given video to a file or gets it from the cache
     /// </summary>
     /// <param name="video">The video to download</param>
     /// <returns>onUpdate: the download percentage.<br />onFinish: the file location</returns>
@@ -145,10 +141,10 @@ public class AudioService
 
         PartiallyFinishedValue<int, string> partially = new();
         var progress = new Progress<DownloadProgress>(
-            p => partially.Update((int)(p.Progress * 100))
+            p => partially.Update((int) (p.Progress * 100))
         );
 
-        partially.Worker = async (_) =>
+        partially.Worker = async _ =>
         {
             var res = await _youtubeDlClient.RunAudioDownload(
                 video.ID,
@@ -157,7 +153,7 @@ public class AudioService
 
             if (!res.Success) return null;
 
-            string path = res.Data;
+            var path = res.Data;
 
             File.Move(path, outputPath);
 
@@ -168,7 +164,7 @@ public class AudioService
     }
 
     /// <summary>
-    /// Fetches the video ids from a playlist url.
+    ///     Fetches the video ids from a playlist url.
     /// </summary>
     /// <param name="query">The playlist url</param>
     /// <returns>The id's of playlist songs or null, if the provided query is not a playlist url</returns>
@@ -188,7 +184,7 @@ public class AudioService
     }
 
     /// <summary>
-    /// Fetches the video data from a video id
+    ///     Fetches the video data from a video id
     /// </summary>
     /// <param name="id">The videos ID</param>
     /// <returns>The video data or null, if the provided ID is not valid</returns>
@@ -201,7 +197,7 @@ public class AudioService
     }
 
     /// <summary>
-    /// Fetches the video ids from a query. Performs a search if the query is not a video or playlist url.
+    ///     Fetches the video ids from a query. Performs a search if the query is not a video or playlist url.
     /// </summary>
     /// <param name="query">The query to search for</param>
     /// <returns>A update of whats going on, an finalises with the id's of the videos</returns>
@@ -218,6 +214,8 @@ public class AudioService
                 // Is not a playlist
                 VideoData video;
                 var res = await _youtubeDlClient.RunVideoDataFetch(query);
+                Console.WriteLine(res.Success);
+                Console.WriteLine(string.Join(", ", res.ErrorOutput));
                 if (res.Success)
                 {
                     video = res.Data;
@@ -230,6 +228,8 @@ public class AudioService
 
                     var apiService = YouTubeApiService.Get();
                     var results = await apiService.Search(query);
+                    
+                    Console.Write(results.Count + " results");
 
                     if (results.Count <= 0) return null;
 
@@ -237,7 +237,7 @@ public class AudioService
                 }
 
                 // video.Url = $"https://www.youtube.com/watch?v={video.ID}";
-                return new List<string> { video.ID };
+                return new List<string> {video.ID};
             }
         };
 
@@ -245,8 +245,9 @@ public class AudioService
     }
 
     /// <summary>
-    /// Enqueues the given video ids.
-    /// This can be a time consuming task due to video data fetching. Therefore its recommended to call this in a seperate thread.
+    ///     Enqueues the given video ids.
+    ///     This can be a time consuming task due to video data fetching. Therefore its recommended to call this in a seperate
+    ///     thread.
     /// </summary>
     /// <param name="videoIds">The video id's to enqueue</param>
     /// <param name="shuffle">Whether to shuffle the videos or not</param>
@@ -267,8 +268,8 @@ public class AudioService
     }
 
     /// <summary>
-    /// Resolves the given query and plays the first result. Enqueues the rest of the results if the query was a
-    /// playlist or the bot is already playing back some audio.
+    ///     Resolves the given query and plays the first result. Enqueues the rest of the results if the query was a
+    ///     playlist or the bot is already playing back some audio.
     /// </summary>
     /// <param name="updateWith">The method called, for updating the status of the bots response.</param>
     /// <param name="query">The query to search for</param>
@@ -286,7 +287,7 @@ public class AudioService
 
         var videoIds = await videoFetcher.Result;
 
-        if (videoIds is not { Count: > 0 }) return AudioModuleResponses.NoResultsFound(query);
+        if (videoIds is not {Count: > 0}) return AudioModuleResponses.NoResultsFound(query);
 
         timer.Stop();
 
@@ -298,10 +299,7 @@ public class AudioService
             return AudioModuleResponses.AddedToQueue(nextVideo, videoIds.Count - 1, Queue.Count);
         }
 
-        if (videoIds.Count > 1)
-        {
-            _ = Enqueue(videoIds.Skip(1).ToList());
-        }
+        if (videoIds.Count > 1) _ = Enqueue(videoIds.Skip(1).ToList());
 
         var downloader = await DownloadAudioOrGetCached(nextVideo);
 
@@ -315,7 +313,6 @@ public class AudioService
 
 
         if (_client is null)
-        {
             try
             {
                 await Connect(voiceChannel);
@@ -326,7 +323,6 @@ public class AudioService
                 Console.WriteLine(e.StackTrace);
                 return AudioModuleResponses.UnableToStartPlayback();
             }
-        }
 
         _ = PlayFromFile(file, voiceChannel);
 
@@ -336,7 +332,7 @@ public class AudioService
     }
 
     /// <summary>
-    /// Plays the given query in the given voice channel.
+    ///     Plays the given query in the given voice channel.
     /// </summary>
     /// <param name="query">The query to play</param>
     /// <param name="voiceChannel">The voice channel to play in</param>
@@ -351,7 +347,7 @@ public class AudioService
 
         Processing = true;
         var response = new PartiallyFinishedValue<FormattedMessage, FormattedMessage>(
-            worker: async (updateWith) => await PlayWorker(updateWith, query, voiceChannel, shuffle));
+            async updateWith => await PlayWorker(updateWith, query, voiceChannel, shuffle));
 
         var timer = _guildConfig.Timer.Run(() =>
         {
@@ -360,7 +356,7 @@ public class AudioService
         }).In(minutes: 2).Start();
 
 
-        response.OnFinished += (_) =>
+        response.OnFinished += _ =>
         {
             timer.Stop();
             return Task.FromResult(Processing = false);
@@ -370,8 +366,8 @@ public class AudioService
     }
 
     /// <summary>
-    /// Fetches the video data next in the queue and plays it.
-    /// Disconnects the bot from the voice channel if the queue is empty.
+    ///     Fetches the video data next in the queue and plays it.
+    ///     Disconnects the bot from the voice channel if the queue is empty.
     /// </summary>
     private async Task Next()
     {
@@ -390,7 +386,7 @@ public class AudioService
             var relatedVideoId = await YouTubeApiService.Get().FindRelatedVideo(CurrentSong!.ID);
             if (relatedVideoId is null) return;
 
-            await Enqueue(new List<string> { relatedVideoId });
+            await Enqueue(new List<string> {relatedVideoId});
         }
 
         var video = Queue.Dequeue();
@@ -406,7 +402,7 @@ public class AudioService
     }
 
     /// <summary>
-    /// Checks if the bot is the only user in its current vc and disconnects if it is.
+    ///     Checks if the bot is the only user in its current vc and disconnects if it is.
     /// </summary>
     /// <returns></returns>
     private async Task CheckIdleStatus()
@@ -415,7 +411,7 @@ public class AudioService
 
         if (channel is not null)
         {
-            var connectedUsers = await channel.GetConnectedUsers(excludeBots: true);
+            var connectedUsers = await channel.GetConnectedUsers();
             if (connectedUsers.Count > 0) return;
         }
 
@@ -423,13 +419,13 @@ public class AudioService
     }
 
     /// <summary>
-    /// Connects the bot to the given voice channel.
+    ///     Connects the bot to the given voice channel.
     /// </summary>
     /// <param name="channel">The channel to connect to</param>
     private async Task Connect(IVoiceChannel channel)
     {
         _client = await channel.ConnectAsync();
-        
+
         _client.ClientDisconnected += _ =>
             Task.FromResult(_guildConfig.Timer.Run(() => CheckIdleStatus()).In(minutes: 1).Start());
 
@@ -444,8 +440,8 @@ public class AudioService
     }
 
     /// <summary>
-    /// Stops the playback and disconnects the bot from the voice channel.
-    /// Also clears the queue.
+    ///     Stops the playback and disconnects the bot from the voice channel.
+    ///     Also clears the queue.
     /// </summary>
     public async Task Disconnect()
     {
@@ -460,7 +456,7 @@ public class AudioService
     }
 
     /// <summary>
-    /// Skips the current song and plays the next one.
+    ///     Skips the current song and plays the next one.
     /// </summary>
     /// <returns>The next song</returns>
     public VideoData? Skip()
@@ -471,8 +467,8 @@ public class AudioService
     }
 
     /// <summary>
-    /// Enqueues the given video query at the first position in the queue.
-    /// If the query is a playlist, null is returned.
+    ///     Enqueues the given video query at the first position in the queue.
+    ///     If the query is a playlist, null is returned.
     /// </summary>
     /// <param name="query">The query to search for</param>
     /// <returns>The songs data</returns>
@@ -492,7 +488,7 @@ public class AudioService
     }
 
     /// <summary>
-    /// Shuffles the queue.
+    ///     Shuffles the queue.
     /// </summary>
     public void Shuffle()
     {

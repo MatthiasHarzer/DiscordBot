@@ -46,6 +46,11 @@ public static class Constants
     public static readonly string YoutubeDlpPath = Environment.GetEnvironmentVariable("YoutubeDlpPath") ?? "yt-dlp";
     
     /// <summary>
+    /// The binary path for ffmpeg
+    /// </summary>
+    public static readonly string FfmpegPath = Environment.GetEnvironmentVariable("FfmpegPath") ?? "ffmpeg";
+    
+    /// <summary>
     /// The discord bot token
     /// </summary>
     public static readonly string? DiscordToken = Environment.GetEnvironmentVariable("DiscordToken");
